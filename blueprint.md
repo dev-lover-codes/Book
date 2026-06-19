@@ -64,4 +64,6 @@
 - [x] **Step 4**: Address the `react-hooks/set-state-in-effect` linting errors in `RetailerDashboard.tsx` and `CustomerDashboard.tsx` using inline comments and asynchronous handlers.
 - [x] **Step 5**: Reorder function declarations in `src/app/page.tsx` (like hoisting `fetchProfile` inside `useCallback`) to fix the temporal dead zone and missing dependency issues.
 - [x] **Step 6**: Identify missing localizations for login flows (OTP inputs, role titles, and submit button actions) and update `src/lib/translations.ts`.
-- [x] **Step 7**: Verify build and linting correctness by executing `npm run lint` and `npm run build` and checking compilation logs.
+- [x] **Step 7**: Link local CLI to remote Supabase project ref `shpivpyjrevwouefxsma`.
+- [x] **Step 8**: Deploy database tables, indexes, triggers, and Row Level Security (RLS) policies to the remote database using `supabase db push`.
+- [x] **Step 9**: Regenerate matching TypeScript interfaces from the live schema and verify build/lint correctness.
