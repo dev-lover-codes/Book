@@ -132,7 +132,7 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
         // We can create a mock auth user using the signup API or we can just try to insert.
         // Wait, we can sign up the customer as a dummy or we can catch and insert.
         // Actually, to make it bulletproof in the client, let's signup a dummy customer using Supabase:
-        const dummyEmail = `customer_${custPhone}@khatamitra.com`;
+        const dummyEmail = `customer_${custPhone}@gmail.com`;
         const dummyPassword = `Pass_${custPhone}`;
         
         // Attempt signup
