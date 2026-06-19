@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const parseResult = requestSchema.safeParse(body);
 
     if (!parseResult.success) {
-      return NextResponse.json({ error: parseResult.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
     }
 
     const { message, userId } = parseResult.data;

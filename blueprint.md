@@ -68,4 +68,5 @@
 - [x] **Step 25**: Update `/src/app/setup-profile/page.tsx` to redirect users to their corresponding dashboard route.
 - [x] **Step 26**: Update the callback handler `/src/app/auth/callback/route.ts` to redirect to `/retailer` or `/customer`.
 - [x] **Step 27**: Verify compilation and run lint checks.
+- [x] **Step 28**: Create a GitHub Actions workflow file `.github/workflows/ci.yml` to run lint and build verification on push/pull request.
 
