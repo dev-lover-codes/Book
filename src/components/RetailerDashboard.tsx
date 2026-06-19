@@ -152,8 +152,9 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
           customerId = res.userId;
         }
 
-        // Note: The auth trigger usually inserts into profiles. If not, we insert it manually:
-        if (customerId) {
+        // Note: The profiles row is already inserted by the adminCreateCustomer server action.
+        // If we had to fallback to client-side signUp, we try a best-effort client upsert.
+        if (customerId && !res.success) {
           const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
@@ -163,7 +164,7 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
               role: 'customer',
               preferred_language: 'hi'
             });
-          if (profileError) console.warn('Profile insert warning (might already exist):', profileError.message);
+          if (profileError) console.warn('Profile insert warning (might already exist or be blocked by RLS):', profileError.message);
         }
       }
 
@@ -185,7 +186,12 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
       setCustPhone('');
       await fetchRelationships();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error('Error in handleAddCustomer:', err);
+      const errorMsg = err instanceof Error 
+        ? err.message 
+        : (typeof err === 'object' && err !== null && 'message' in err)
+          ? String((err as { message: unknown }).message)
+          : String(err);
       setAddCustError(errorMsg || 'Error adding customer.');
     } finally {
       setIsLoading(false);

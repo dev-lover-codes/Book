@@ -138,6 +138,21 @@ export async function adminCreateCustomer(name: string, phone: string) {
       return { success: false, error: error.message };
     }
 
+    if (data.user?.id) {
+      const { error: profileError } = await adminClient
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          full_name: name,
+          phone: phone,
+          role: 'customer',
+          preferred_language: 'hi'
+        });
+      if (profileError) {
+        return { success: false, error: `Failed to insert customer profile: ${profileError.message}` };
+      }
+    }
+
     return { success: true, userId: data.user?.id };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown admin auth error' };
