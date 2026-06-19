@@ -12,8 +12,9 @@ jobs:
     steps:
       - name: Ping Supabase REST Endpoint
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # UPDATE THESE TWO LINES BELOW to match the new GitHub Secret names
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           curl -i -s "$SUPABASE_URL/rest/v1/" \
             -H "apikey: $SUPABASE_KEY" \
