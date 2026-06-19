@@ -177,7 +177,7 @@ export async function fetchRetailerRelationships(retailerId: string) {
         id,
         customer_id,
         balance,
-        customer:profiles!customer_id(full_name, phone)
+        customer:profiles!customer_id(full_name, phone, address, email, notes)
       `)
       .eq('retailer_id', retailerId);
 
@@ -197,12 +197,60 @@ export async function fetchCustomerRelationships(customerId: string) {
         id,
         retailer_id,
         balance,
-        retailer:profiles!retailer_id(full_name, phone, business_name)
+        retailer:profiles!retailer_id(full_name, phone, business_name, business_address, business_category, business_upi, business_phone)
       `)
       .eq('customer_id', customerId);
 
     if (error) throw error;
     return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function updateProfile(
+  profileId: string,
+  data: {
+    full_name?: string;
+    business_name?: string;
+    business_address?: string;
+    business_category?: string;
+    business_upi?: string;
+    business_phone?: string;
+    business_gstin?: string;
+  }
+) {
+  try {
+    const adminClient = createAdminClient();
+    const { error } = await adminClient
+      .from('profiles')
+      .update(data)
+      .eq('id', profileId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function updateCustomerDetails(
+  customerId: string,
+  data: {
+    address?: string;
+    email?: string;
+    notes?: string;
+  }
+) {
+  try {
+    const adminClient = createAdminClient();
+    const { error } = await adminClient
+      .from('profiles')
+      .update(data)
+      .eq('id', customerId);
+
+    if (error) throw error;
+    return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }

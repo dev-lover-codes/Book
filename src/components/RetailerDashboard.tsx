@@ -3,15 +3,20 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatIndianCurrency } from '@/lib/format';
-import { adminCreateCustomer, findProfileByPhone, fetchRetailerRelationships } from '@/app/actions/auth';
+import { adminCreateCustomer, findProfileByPhone, fetchRetailerRelationships, updateProfile, updateCustomerDetails } from '@/app/actions/auth';
 import LedgerHistory from './LedgerHistory';
-import { Search, UserPlus, PlusCircle, ArrowUpRight, ArrowDownLeft, X, ArrowLeft, Phone, User, Store } from 'lucide-react';
+import { Search, UserPlus, PlusCircle, ArrowUpRight, ArrowDownLeft, X, ArrowLeft, Phone, User, Store, Settings, Mail, MapPin, ClipboardList } from 'lucide-react';
 
 interface Profile {
   id: string;
   full_name: string;
   role: 'retailer' | 'customer';
   business_name: string | null;
+  business_address?: string | null;
+  business_category?: string | null;
+  business_gstin?: string | null;
+  business_upi?: string | null;
+  business_phone?: string | null;
   preferred_language: 'hi' | 'en';
 }
 
@@ -22,6 +27,9 @@ interface CustomerRelationship {
   customer: {
     full_name: string;
     phone: string | null;
+    address?: string | null;
+    email?: string | null;
+    notes?: string | null;
   };
 }
 
@@ -54,6 +62,24 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
   const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
   const [addEntryError, setAddEntryError] = useState<string | null>(null);
 
+  // Shop Settings State
+  const [isShopSettingsOpen, setIsShopSettingsOpen] = useState(false);
+  const [shopName, setShopName] = useState(profile.business_name || '');
+  const [shopAddress, setShopAddress] = useState(profile.business_address || '');
+  const [shopCategory, setShopCategory] = useState(profile.business_category || '');
+  const [shopUpi, setShopUpi] = useState(profile.business_upi || '');
+  const [shopPhone, setShopPhone] = useState(profile.business_phone || '');
+  const [shopGstin, setShopGstin] = useState(profile.business_gstin || '');
+  const [shopSettingsError, setShopSettingsError] = useState<string | null>(null);
+  const [shopSettingsSuccess, setShopSettingsSuccess] = useState(false);
+
+  // Editing Customer details State
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [custNotesText, setCustNotesText] = useState('');
+  const [custAddressText, setCustAddressText] = useState('');
+  const [custEmailText, setCustEmailText] = useState('');
+  const [isSavingCustDetails, setIsSavingCustDetails] = useState(false);
+
   // Fetch all retailer-customer relationships
   async function fetchRelationships() {
     setIsLoading(true);
@@ -83,6 +109,8 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
     fetchRelationships();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id]);
+
+
 
   // Handle adding customer (Lookup by phone, otherwise insert profile + relationship)
   const handleAddCustomer = async (e: React.FormEvent) => {
@@ -185,6 +213,56 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
     }
   };
 
+  // Save Retailer Shop Profile settings
+  const handleSaveShopSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shopName) {
+      setShopSettingsError(lang === 'hi' ? 'कृपया दुकान का नाम दर्ज करें।' : 'Please enter shop name.');
+      return;
+    }
+    setShopSettingsError(null);
+    setShopSettingsSuccess(false);
+    setIsLoading(true);
+    try {
+      const res = await updateProfile(profile.id, {
+        business_name: shopName,
+        business_address: shopAddress,
+        business_category: shopCategory,
+        business_upi: shopUpi,
+        business_phone: shopPhone,
+        business_gstin: shopGstin
+      });
+      if (!res.success) throw new Error(res.error);
+      setShopSettingsSuccess(true);
+      window.location.reload();
+    } catch (err) {
+      setShopSettingsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Save Customer personal details (notes, address, email)
+  const handleSaveCustomerDetails = async () => {
+    if (!selectedCust) return;
+    setIsSavingCustDetails(true);
+    try {
+      const res = await updateCustomerDetails(selectedCust.customer_id, {
+        address: custAddressText,
+        email: custEmailText,
+        notes: custNotesText
+      });
+      if (!res.success) throw new Error(res.error);
+      setIsEditingNotes(false);
+      await fetchRelationships();
+    } catch (err) {
+      console.error('Error saving customer details:', err);
+      alert(lang === 'hi' ? 'विवरण सहेजने में विफल।' : 'Failed to save details.');
+    } finally {
+      setIsSavingCustDetails(false);
+    }
+  };
+
   // Handle adding credit/debit transaction
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,8 +319,15 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
           <span className="text-[10px] uppercase font-bold tracking-widest bg-white/20 px-2 py-0.5 rounded-full">
             {lang === 'hi' ? 'दुकानदार डैशबोर्ड' : 'Retailer Dashboard'}
           </span>
-          <h2 className="text-2xl font-black mt-2 leading-none">
+          <h2 className="text-2xl font-black mt-2 leading-none flex items-center gap-2">
             {profile.business_name || profile.full_name}
+            <button
+              onClick={() => setIsShopSettingsOpen(true)}
+              className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors cursor-pointer animate-pulse"
+              title={lang === 'hi' ? 'दुकान सेटिंग्स' : 'Shop Settings'}
+            >
+              <Settings className="h-4.5 w-4.5" />
+            </button>
           </h2>
           <p className="text-xs text-brand-100 mt-1 flex items-center gap-1">
             <Store className="h-3.5 w-3.5" />
@@ -304,7 +389,10 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
                 return (
                   <button
                     key={r.id}
-                    onClick={() => setSelectedCust(r)}
+                    onClick={() => {
+                      setIsEditingNotes(false);
+                      setSelectedCust(r);
+                    }}
                     className="p-5 rounded-2xl bg-white dark:bg-[#121218] border border-zinc-150 dark:border-zinc-800/80 hover:border-brand-500/40 dark:hover:border-brand-500/40 shadow-sm hover:shadow transition-all text-left flex justify-between items-center group cursor-pointer"
                   >
                     <div>
@@ -342,7 +430,10 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
           {/* Selected Customer Header */}
           <div className="flex items-center justify-between pb-3 border-b border-zinc-150 dark:border-zinc-800/80">
             <button
-              onClick={() => setSelectedCust(null)}
+              onClick={() => {
+                setIsEditingNotes(false);
+                setSelectedCust(null);
+              }}
               className="text-xs font-bold text-zinc-400 dark:text-zinc-500 hover:text-brand-600 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -390,6 +481,101 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
                     ? (lang === 'hi' ? 'ग्राहक से लेने हैं' : 'Customer owes you') 
                     : (lang === 'hi' ? 'ग्राहक के जमा हैं' : 'You owe Customer')}
                 </span>
+              </div>
+
+              {/* Customer Details Display / Inline Edit */}
+              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase">
+                    {lang === 'hi' ? 'अतिरिक्त जानकारी' : 'Additional Info'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (isEditingNotes) {
+                        handleSaveCustomerDetails();
+                      } else {
+                        setCustNotesText(selectedCust.customer.notes || '');
+                        setCustAddressText(selectedCust.customer.address || '');
+                        setCustEmailText(selectedCust.customer.email || '');
+                        setIsEditingNotes(true);
+                      }
+                    }}
+                    disabled={isSavingCustDetails}
+                    className="text-xs text-brand-600 dark:text-brand-400 font-bold hover:underline cursor-pointer"
+                  >
+                    {isSavingCustDetails 
+                      ? (lang === 'hi' ? 'सहेज रहा है...' : 'Saving...')
+                      : isEditingNotes 
+                        ? (lang === 'hi' ? 'सहेजें' : 'Save') 
+                        : (lang === 'hi' ? 'बदलें' : 'Edit')}
+                  </button>
+                </div>
+
+                {isEditingNotes ? (
+                  <div className="space-y-3 animate-fade-in text-xs">
+                    {/* Edit Address */}
+                    <div className="space-y-1">
+                      <label className="font-semibold text-zinc-400 block">{lang === 'hi' ? 'पता' : 'Address'}</label>
+                      <input
+                        type="text"
+                        value={custAddressText}
+                        onChange={(e) => setCustAddressText(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121218] text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                      />
+                    </div>
+                    
+                    {/* Edit Email */}
+                    <div className="space-y-1">
+                      <label className="font-semibold text-zinc-400 block">{lang === 'hi' ? 'ईमेल' : 'Email'}</label>
+                      <input
+                        type="email"
+                        value={custEmailText}
+                        onChange={(e) => setCustEmailText(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121218] text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Edit Notes */}
+                    <div className="space-y-1">
+                      <label className="font-semibold text-zinc-400 block">{lang === 'hi' ? 'टिप्पणी (Notes)' : 'Notes'}</label>
+                      <textarea
+                        value={custNotesText}
+                        onChange={(e) => setCustNotesText(e.target.value)}
+                        rows={3}
+                        className="w-full px-2 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121218] text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-xs text-zinc-650 dark:text-zinc-350">
+                    {/* Display Address */}
+                    <div className="flex items-start gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 mt-0.5 text-zinc-400 flex-shrink-0" />
+                      <div>
+                        <span className="font-semibold text-zinc-400 block text-[9px] uppercase">{lang === 'hi' ? 'पता' : 'Address'}</span>
+                        <span>{selectedCust.customer.address || (lang === 'hi' ? 'कोई पता नहीं' : 'No address')}</span>
+                      </div>
+                    </div>
+
+                    {/* Display Email */}
+                    <div className="flex items-start gap-1.5">
+                      <Mail className="h-3.5 w-3.5 mt-0.5 text-zinc-400 flex-shrink-0" />
+                      <div>
+                        <span className="font-semibold text-zinc-400 block text-[9px] uppercase">{lang === 'hi' ? 'ईमेल' : 'Email'}</span>
+                        <span className="break-all">{selectedCust.customer.email || (lang === 'hi' ? 'कोई ईमेल नहीं' : 'No email')}</span>
+                      </div>
+                    </div>
+
+                    {/* Display Notes */}
+                    <div className="flex items-start gap-1.5">
+                      <ClipboardList className="h-3.5 w-3.5 mt-0.5 text-zinc-400 flex-shrink-0" />
+                      <div>
+                        <span className="font-semibold text-zinc-400 block text-[9px] uppercase">{lang === 'hi' ? 'टिप्पणियां' : 'Notes'}</span>
+                        <p className="whitespace-pre-line leading-relaxed">{selectedCust.customer.notes || (lang === 'hi' ? 'कोई टिप्पणी नहीं' : 'No notes added')}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -582,6 +768,143 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
                   <span className="flex h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
                   <span>{lang === 'hi' ? 'दर्ज करें (Save)' : 'Save Transaction'}</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: SHOP SETTINGS ================= */}
+      {isShopSettingsOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-[#121218] rounded-3xl border border-zinc-150 dark:border-zinc-800/80 shadow-2xl p-6 relative animate-slide-up max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setIsShopSettingsOpen(false);
+                setShopSettingsError(null);
+                setShopSettingsSuccess(false);
+              }}
+              className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-lg font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 mb-4">
+              <Settings className="text-brand-500 h-5 w-5" />
+              {lang === 'hi' ? 'दुकान की सेटिंग्स' : 'Shop Settings'}
+            </h3>
+
+            {shopSettingsError && (
+              <div className="p-3 mb-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50 rounded-xl text-xs text-red-600 dark:text-red-400">
+                {shopSettingsError}
+              </div>
+            )}
+
+            {shopSettingsSuccess && (
+              <div className="p-3 mb-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-250 dark:border-emerald-800/50 rounded-xl text-xs text-emerald-600 dark:text-emerald-400">
+                {lang === 'hi' ? 'सेटिंग्स सफलतापूर्वक सहेजी गईं!' : 'Settings saved successfully!'}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveShopSettings} className="space-y-4">
+              {/* Shop Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {lang === 'hi' ? 'दुकान का नाम' : 'Shop Name'}
+                </label>
+                <input
+                  type="text"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                />
+              </div>
+
+              {/* Shop Category */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {lang === 'hi' ? 'श्रेणी' : 'Category'}
+                </label>
+                <select
+                  value={shopCategory}
+                  onChange={(e) => setShopCategory(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                >
+                  <option value="">Select Category</option>
+                  <option value="Kirana / Grocery">Kirana / Grocery</option>
+                  <option value="Pharmacy / Medical">Pharmacy / Medical</option>
+                  <option value="Dairy / Milk">Dairy / Milk</option>
+                  <option value="Apparel / Clothing">Apparel / Clothing</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Vegetables / Fruits">Vegetables / Fruits</option>
+                  <option value="Restaurant / Cafe">Restaurant / Cafe</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Shop Address */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {lang === 'hi' ? 'दुकान का पता' : 'Shop Address'}
+                </label>
+                <input
+                  type="text"
+                  value={shopAddress}
+                  onChange={(e) => setShopAddress(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                />
+              </div>
+
+              {/* UPI ID */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {lang === 'hi' ? 'UPI आईडी' : 'UPI ID'}
+                </label>
+                <input
+                  type="text"
+                  value={shopUpi}
+                  onChange={(e) => setShopUpi(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                />
+              </div>
+
+              {/* Shop Phone */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {lang === 'hi' ? 'संपर्क नंबर' : 'Contact Phone'}
+                </label>
+                <input
+                  type="tel"
+                  value={shopPhone}
+                  onChange={(e) => setShopPhone(e.target.value.replace(/\D/g, ''))}
+                  maxLength={10}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                />
+              </div>
+
+              {/* GSTIN */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {lang === 'hi' ? 'GSTIN (वैकल्पिक)' : 'GSTIN (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={shopGstin}
+                  onChange={(e) => setShopGstin(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 px-6 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer mt-2 text-sm"
+              >
+                {isLoading ? (
+                  <span className="flex h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <span>{lang === 'hi' ? 'सहेजें (Save)' : 'Save Changes'}</span>
                 )}
               </button>
             </form>

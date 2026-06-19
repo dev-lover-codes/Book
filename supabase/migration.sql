@@ -11,6 +11,14 @@ create table if not exists public.profiles (
   phone text unique,
   role text check (role in ('retailer','customer')) not null,
   business_name text,
+  business_address text,
+  business_category text,
+  business_gstin text,
+  business_upi text,
+  business_phone text,
+  address text,
+  email text,
+  notes text,
   preferred_language text default 'hi' check (preferred_language in ('hi','en')),
   created_at timestamptz default now()
 );

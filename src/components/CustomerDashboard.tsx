@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { formatIndianCurrency } from '@/lib/format';
 import { fetchCustomerRelationships } from '@/app/actions/auth';
 import LedgerHistory from './LedgerHistory';
-import { Store, ArrowLeft, Phone, User } from 'lucide-react';
+import { Store, ArrowLeft, Phone, User, MapPin, CreditCard, Copy, Check } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -22,6 +22,10 @@ interface RetailerRelationship {
     full_name: string;
     phone: string | null;
     business_name: string | null;
+    business_address?: string | null;
+    business_category?: string | null;
+    business_upi?: string | null;
+    business_phone?: string | null;
   };
 }
 
@@ -35,6 +39,13 @@ export default function CustomerDashboard({ profile }: CustomerDashboardProps) {
   const [relationships, setRelationships] = useState<RetailerRelationship[]>([]);
   const [selectedRel, setSelectedRel] = useState<RetailerRelationship | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const handleCopyUpi = (upi: string) => {
+    navigator.clipboard.writeText(upi);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
 
   // Fetch all customer-retailer relationships
   async function fetchRelationships() {
@@ -178,14 +189,32 @@ export default function CustomerDashboard({ profile }: CustomerDashboardProps) {
                 <h3 className="text-lg font-black text-zinc-800 dark:text-zinc-200 mt-1">
                   {selectedRel.retailer.business_name || selectedRel.retailer.full_name}
                 </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-1">
-                  <User className="h-3 w-3" /> {selectedRel.retailer.full_name}
-                </p>
-                {selectedRel.retailer.phone && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-0.5">
-                    <Phone className="h-3 w-3" /> {selectedRel.retailer.phone}
-                  </p>
+                {selectedRel.retailer.business_category && (
+                  <span className="inline-block text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-md mt-1">
+                    {selectedRel.retailer.business_category}
+                  </span>
                 )}
+                
+                <div className="space-y-2 mt-3 pt-3 border-t border-zinc-200/60 dark:border-zinc-800/40">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                    <span>{selectedRel.retailer.full_name}</span>
+                  </p>
+                  
+                  {(selectedRel.retailer.business_phone || selectedRel.retailer.phone) && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                      <span>{selectedRel.retailer.business_phone || selectedRel.retailer.phone}</span>
+                    </p>
+                  )}
+
+                  {selectedRel.retailer.business_address && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-start gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                      <span>{selectedRel.retailer.business_address}</span>
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/50">
@@ -203,6 +232,36 @@ export default function CustomerDashboard({ profile }: CustomerDashboardProps) {
                     : (lang === 'hi' ? 'दुकानदार से वापस लेने हैं' : 'Shopkeeper owes you')}
                 </span>
               </div>
+
+              {selectedRel.retailer.business_upi && (
+                <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/50 space-y-2">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block">
+                    {lang === 'hi' ? 'UPI द्वारा भुगतान करें' : 'Pay via UPI'}
+                  </span>
+                  <div className="flex items-center gap-2 bg-white dark:bg-zinc-950 p-2 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <CreditCard className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span className="text-xs font-mono select-all truncate text-zinc-700 dark:text-zinc-300 flex-1">
+                      {selectedRel.retailer.business_upi}
+                    </span>
+                    <button
+                      onClick={() => handleCopyUpi(selectedRel.retailer.business_upi!)}
+                      className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-emerald-500 transition-colors"
+                      title={lang === 'hi' ? 'UPI आईडी कॉपी करें' : 'Copy UPI ID'}
+                    >
+                      {copiedUpi ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </div>
+                  {copiedUpi && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold text-center">
+                      {lang === 'hi' ? 'UPI आईडी कॉपी हो गई है!' : 'UPI ID copied to clipboard!'}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Ledger Transactions list */}

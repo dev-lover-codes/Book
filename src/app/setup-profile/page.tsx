@@ -15,6 +15,13 @@ export default function SetupProfilePage() {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'retailer' | 'customer'>('retailer');
   const [businessName, setBusinessName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [businessCategory, setBusinessCategory] = useState('');
+  const [businessGstin, setBusinessGstin] = useState('');
+  const [businessUpi, setBusinessUpi] = useState('');
+  const [businessPhone, setBusinessPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [email, setEmail] = useState('');
   const [language, setLanguage] = useState<'hi' | 'en'>('hi');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -89,6 +96,13 @@ export default function SetupProfilePage() {
           phone: phone || null,
           role,
           business_name: role === 'retailer' ? businessName : null,
+          business_address: role === 'retailer' ? (businessAddress || null) : null,
+          business_category: role === 'retailer' ? (businessCategory || null) : null,
+          business_gstin: role === 'retailer' ? (businessGstin || null) : null,
+          business_upi: role === 'retailer' ? (businessUpi || null) : null,
+          business_phone: role === 'retailer' ? (businessPhone || null) : null,
+          address: role === 'customer' ? (address || null) : null,
+          email: role === 'customer' ? (email || null) : null,
           preferred_language: language
         });
 
@@ -237,19 +251,134 @@ export default function SetupProfilePage() {
             </div>
           </div>
 
-          {/* Business Name (Retailer Only) */}
+          {/* Business Details (Retailer Only) */}
           {role === 'retailer' && (
-            <div className="space-y-1 animate-slide-up">
-              <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                {language === 'hi' ? 'दुकान या व्यवसाय का नाम' : 'Shop / Business Name'}
-              </label>
-              <input
-                type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder={language === 'hi' ? 'दुकान का नाम (उदा. राजू प्रोविजन स्टोर)' : 'Enter shop name (e.g., Raju Provision Store)'}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
-              />
+            <div className="space-y-4 animate-slide-up">
+              {/* Business Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'दुकान या व्यवसाय का नाम' : 'Shop / Business Name'}
+                </label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder={language === 'hi' ? 'दुकान का नाम (उदा. राजू प्रोविजन स्टोर)' : 'Enter shop name (e.g., Raju Provision Store)'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              {/* Business Category */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'व्यवसाय की श्रेणी' : 'Business Category'}
+                </label>
+                <select
+                  value={businessCategory}
+                  onChange={(e) => setBusinessCategory(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                >
+                  <option value="">{language === 'hi' ? 'श्रेणी चुनें' : 'Select Category'}</option>
+                  <option value="Kirana / Grocery">{language === 'hi' ? 'किराना / किराना दुकान' : 'Kirana / Grocery'}</option>
+                  <option value="Pharmacy / Medical">{language === 'hi' ? 'दवा / मेडिकल स्टोर' : 'Pharmacy / Medical'}</option>
+                  <option value="Dairy / Milk">{language === 'hi' ? 'डेयरी / दूध की दुकान' : 'Dairy / Milk'}</option>
+                  <option value="Apparel / Clothing">{language === 'hi' ? 'कपड़े की दुकान' : 'Apparel / Clothing'}</option>
+                  <option value="Electronics">{language === 'hi' ? 'इलेक्ट्रॉनिक्स' : 'Electronics'}</option>
+                  <option value="Vegetables / Fruits">{language === 'hi' ? 'सब्जी / फल' : 'Vegetables / Fruits'}</option>
+                  <option value="Restaurant / Cafe">{language === 'hi' ? 'रेस्तरां / कैफे' : 'Restaurant / Cafe'}</option>
+                  <option value="Other">{language === 'hi' ? 'अन्य' : 'Other'}</option>
+                </select>
+              </div>
+
+              {/* Shop Address */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'दुकान का पता' : 'Shop Address'}
+                </label>
+                <input
+                  type="text"
+                  value={businessAddress}
+                  onChange={(e) => setBusinessAddress(e.target.value)}
+                  placeholder={language === 'hi' ? 'दुकान का पता दर्ज करें' : 'Enter shop address'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              {/* UPI ID */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'UPI आईडी (भुगतान स्वीकार करने के लिए)' : 'UPI ID (For accepting payments)'}
+                </label>
+                <input
+                  type="text"
+                  value={businessUpi}
+                  onChange={(e) => setBusinessUpi(e.target.value)}
+                  placeholder={language === 'hi' ? 'उदा. shopname@upi' : 'e.g., shopname@upi'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              {/* Business Phone */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'दुकान का संपर्क नंबर' : 'Shop Contact Phone'}
+                </label>
+                <input
+                  type="tel"
+                  value={businessPhone}
+                  onChange={(e) => setBusinessPhone(e.target.value.replace(/\D/g, ''))}
+                  maxLength={10}
+                  placeholder={language === 'hi' ? 'दुकान का मोबाइल नंबर' : 'Shop contact phone'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              {/* GSTIN */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'GSTIN (वैकल्पिक)' : 'GSTIN (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={businessGstin}
+                  onChange={(e) => setBusinessGstin(e.target.value.toUpperCase())}
+                  placeholder={language === 'hi' ? 'जीएसटीआईएन नंबर दर्ज करें' : 'Enter GSTIN number'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Customer Details (Customer Only) */}
+          {role === 'customer' && (
+            <div className="space-y-4 animate-slide-up">
+              {/* Personal Address */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'आपका पता' : 'Your Address'}
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder={language === 'hi' ? 'अपना पता दर्ज करें' : 'Enter your address'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
+
+              {/* Email Address */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                  {language === 'hi' ? 'ईमेल पता' : 'Email Address'}
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={language === 'hi' ? 'उदा. name@example.com' : 'e.g. name@example.com'}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/20 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                />
+              </div>
             </div>
           )}
 
