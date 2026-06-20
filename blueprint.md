@@ -69,4 +69,4 @@
 - [x] **Step 26**: Update the callback handler `/src/app/auth/callback/route.ts` to redirect to `/retailer` or `/customer`.
 - [x] **Step 27**: Verify compilation and run lint checks.
 - [x] **Step 28**: Create a GitHub Actions workflow file `.github/workflows/ci.yml` to run lint and build verification on push/pull request.
-
+- [x] **Step 29**: Generate a professional, modern crimson red and gold App Icon / Favicon (featuring traditional Indian ledger book motif and AI sparkles). Process and place files (`icon.png`, `favicon.ico`) in `/src/app` and `/public` directories for Next.js asset optimization.
