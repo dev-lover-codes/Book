@@ -217,6 +217,63 @@ Operational Guidelines:
             toolResponse = { success: false, error: 'Invalid mathematical expression' };
           }
         }
+        
+        else if (name === 'add_inventory_item') {
+          const { retailer_id, item_name, category, quantity, cost_price, selling_price } = args as {
+            retailer_id: string;
+            item_name: string;
+            category: 'books' | 'pens' | 'notebooks' | 'art_supplies' | 'other';
+            quantity: number;
+            cost_price?: number;
+            selling_price?: number;
+          };
+
+          // Check if item already exists in inventory (under this retailer_id and matching item_name exactly, case-insensitive)
+          const { data: existingItem } = await supabase
+            .from('inventory')
+            .select('*')
+            .eq('retailer_id', retailer_id)
+            .ilike('item_name', item_name)
+            .maybeSingle();
+
+          if (existingItem) {
+            // Update quantity of existing item
+            const newStock = existingItem.stock_quantity + Number(quantity);
+            const { error: updateError } = await supabase
+              .from('inventory')
+              .update({
+                stock_quantity: newStock,
+                cost_price: cost_price !== undefined ? Number(cost_price) : existingItem.cost_price,
+                selling_price: selling_price !== undefined ? Number(selling_price) : existingItem.selling_price,
+              })
+              .eq('id', existingItem.id);
+
+            if (updateError) throw updateError;
+            toolResponse = {
+              success: true,
+              message: `Updated stock of existing item "${existingItem.item_name}". Added ${quantity} units. New stock level is ${newStock}.`
+            };
+          } else {
+            // Insert new item
+            const { error: insertError } = await supabase
+              .from('inventory')
+              .insert({
+                retailer_id,
+                item_name,
+                category,
+                stock_quantity: Number(quantity),
+                cost_price: cost_price !== undefined ? Number(cost_price) : 0,
+                selling_price: selling_price !== undefined ? Number(selling_price) : 0,
+                low_stock_threshold: 5
+              });
+
+            if (insertError) throw insertError;
+            toolResponse = {
+              success: true,
+              message: `Successfully added new inventory item "${item_name}" under category "${category}" with ${quantity} units.`
+            };
+          }
+        }
       } catch (err) {
         toolResponse = { success: false, error: err instanceof Error ? err.message : 'Unknown tool error' };
       }

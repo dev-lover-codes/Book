@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatIndianCurrency } from '@/lib/format';
 import { adminCreateCustomer, findProfileByPhone, fetchRetailerRelationships, updateProfile, updateCustomerDetails } from '@/app/actions/auth';
 import LedgerHistory from './LedgerHistory';
+import StationeryManager from './StationeryManager';
 import { Search, UserPlus, PlusCircle, ArrowUpRight, ArrowDownLeft, X, ArrowLeft, Phone, User, Store, Settings, Mail, MapPin, ClipboardList } from 'lucide-react';
 
 interface Profile {
@@ -43,6 +44,7 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
 
   const [relationships, setRelationships] = useState<CustomerRelationship[]>([]);
   const [selectedCust, setSelectedCust] = useState<CustomerRelationship | null>(null);
+  const [activeTab, setActiveTab] = useState<'ledgers' | 'stationery'>('ledgers');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -343,84 +345,114 @@ export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
       </div>
 
       {!selectedCust ? (
-        /* ================= LIST OF CUSTOMERS VIEW ================= */
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-x-0 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={lang === 'hi' ? 'ग्राहक का नाम खोजें...' : 'Search customer by name...'}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121218] text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
-              />
-            </div>
+          {/* Tab Selector */}
+          <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-2">
             <button
-              onClick={() => setIsAddCustOpen(true)}
-              className="px-5 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer text-sm"
+              onClick={() => setActiveTab('ledgers')}
+              className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all cursor-pointer ${
+                activeTab === 'ledgers'
+                  ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                  : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-300'
+              }`}
             >
-              <UserPlus className="h-4 w-4" />
-              <span>{lang === 'hi' ? 'नया ग्राहक जोड़ें' : 'Add Customer'}</span>
+              {lang === 'hi' ? 'बहीखाता (Ledgers)' : 'Customer Ledgers'}
+            </button>
+            <button
+              onClick={() => setActiveTab('stationery')}
+              className={`pb-3 px-4 font-bold text-sm border-b-2 transition-all cursor-pointer ${
+                activeTab === 'stationery'
+                  ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                  : 'border-transparent text-zinc-400 dark:text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              {lang === 'hi' ? 'स्टेशनरी एवं पुस्तकें (Stationery)' : 'Stationery & Books'}
             </button>
           </div>
 
-          {isLoading && relationships.length === 0 ? (
-            <div className="flex justify-center p-8">
-              <span className="flex h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-            </div>
-          ) : filteredRelationships.length === 0 ? (
-            <div className="text-center p-12 bg-white dark:bg-[#121218] rounded-3xl border border-zinc-150 dark:border-zinc-800/80 shadow-sm flex flex-col items-center justify-center">
-              <User className="h-10 w-10 text-zinc-400 mb-2" />
-              <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-                {lang === 'hi' ? 'कोई ग्राहक नहीं मिला।' : 'No customers linked yet.'}
-              </p>
-              <button
-                onClick={() => setIsAddCustOpen(true)}
-                className="text-xs text-brand-600 dark:text-brand-400 font-bold hover:underline mt-1"
-              >
-                {lang === 'hi' ? 'पहला ग्राहक जोड़ें' : 'Add your first customer'}
-              </button>
+          {activeTab === 'ledgers' ? (
+            /* ================= LIST OF CUSTOMERS VIEW ================= */
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-x-0 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={lang === 'hi' ? 'ग्राहक का नाम खोजें...' : 'Search customer by name...'}
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121218] text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-zinc-800 dark:text-zinc-200"
+                  />
+                </div>
+                <button
+                  onClick={() => setIsAddCustOpen(true)}
+                  className="px-5 py-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 hover:scale-102 active:scale-98 transition-all cursor-pointer text-sm"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span>{lang === 'hi' ? 'नया ग्राहक जोड़ें' : 'Add Customer'}</span>
+                </button>
+              </div>
+
+              {isLoading && relationships.length === 0 ? (
+                <div className="flex justify-center p-8">
+                  <span className="flex h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                </div>
+              ) : filteredRelationships.length === 0 ? (
+                <div className="text-center p-12 bg-white dark:bg-[#121218] rounded-3xl border border-zinc-150 dark:border-zinc-800/80 shadow-sm flex flex-col items-center justify-center">
+                  <User className="h-10 w-10 text-zinc-400 mb-2" />
+                  <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+                    {lang === 'hi' ? 'कोई ग्राहक नहीं मिला।' : 'No customers linked yet.'}
+                  </p>
+                  <button
+                    onClick={() => setIsAddCustOpen(true)}
+                    className="text-xs text-brand-600 dark:text-brand-400 font-bold hover:underline mt-1"
+                  >
+                    {lang === 'hi' ? 'पहला ग्राहक जोड़ें' : 'Add your first customer'}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {filteredRelationships.map((r) => {
+                    const owesMoney = r.balance > 0;
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          setIsEditingNotes(false);
+                          setSelectedCust(r);
+                        }}
+                        className="p-5 rounded-2xl bg-white dark:bg-[#121218] border border-zinc-150 dark:border-zinc-800/80 hover:border-brand-500/40 dark:hover:border-brand-500/40 shadow-sm hover:shadow transition-all text-left flex justify-between items-center group cursor-pointer"
+                      >
+                        <div>
+                          <h4 className="font-extrabold text-zinc-800 dark:text-zinc-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                            {r.customer.full_name}
+                          </h4>
+                          {r.customer.phone && (
+                            <p className="text-[10px] text-zinc-400 font-medium flex items-center gap-0.5 mt-0.5">
+                              <Phone className="h-2.5 w-2.5" /> {r.customer.phone}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-sm font-black block ${
+                            owesMoney ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            {formatIndianCurrency(Math.abs(r.balance))}
+                          </span>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">
+                            {owesMoney 
+                              ? (lang === 'hi' ? 'बकाया (Owe)' : 'Outstanding') 
+                              : (lang === 'hi' ? 'अग्रिम (Advance)' : 'Advance')}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {filteredRelationships.map((r) => {
-                const owesMoney = r.balance > 0;
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => {
-                      setIsEditingNotes(false);
-                      setSelectedCust(r);
-                    }}
-                    className="p-5 rounded-2xl bg-white dark:bg-[#121218] border border-zinc-150 dark:border-zinc-800/80 hover:border-brand-500/40 dark:hover:border-brand-500/40 shadow-sm hover:shadow transition-all text-left flex justify-between items-center group cursor-pointer"
-                  >
-                    <div>
-                      <h4 className="font-extrabold text-zinc-800 dark:text-zinc-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                        {r.customer.full_name}
-                      </h4>
-                      {r.customer.phone && (
-                        <p className="text-[10px] text-zinc-400 font-medium flex items-center gap-0.5 mt-0.5">
-                          <Phone className="h-2.5 w-2.5" /> {r.customer.phone}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-sm font-black block ${
-                        owesMoney ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
-                      }`}>
-                        {formatIndianCurrency(Math.abs(r.balance))}
-                      </span>
-                      <span className="text-[9px] font-bold text-zinc-400 uppercase">
-                        {owesMoney 
-                          ? (lang === 'hi' ? 'बकाया (Owe)' : 'Outstanding') 
-                          : (lang === 'hi' ? 'अग्रिम (Advance)' : 'Advance')}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <StationeryManager retailerId={profile.id} lang={lang} />
           )}
         </div>
       ) : (

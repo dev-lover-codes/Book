@@ -79,4 +79,10 @@
 - [x] **Step 36**: Modify `src/app/page.tsx` to handle Google Sign-in on the client side using the browser Supabase client to fix the `NEXT_REDIRECT` error display.
 - [x] **Step 37**: Implement the Forgot Password form toggle and email link request handler in `src/app/page.tsx`.
 - [x] **Step 38**: Create the bilingual `/src/app/reset-password/page.tsx` page to handle password updating.
+- [ ] **Step 39**: Extend the Supabase schema with migrations for `inventory` and `stationery_sales` tables including RLS policies and an auto-decrement stock trigger function.
+- [ ] **Step 40**: Create `src/app/actions/stationery.ts` with helper actions to fetch inventory, check low stock, add items, and record counter sales.
+- [ ] **Step 41**: Register the `add_inventory_item` tool definition in `src/lib/gemini.ts` and wire its execution in `src/app/api/assistant/route.ts`.
+- [ ] **Step 42**: Create the bilingual frontend panel `src/components/StationeryManager.tsx` with inventory tracking, low-stock alerts, and a counter sales billing form.
+- [ ] **Step 43**: Add the Stationery management section as a tab/panel in `src/components/RetailerDashboard.tsx` for retailers.
+
 

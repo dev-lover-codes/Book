@@ -106,11 +106,48 @@ export const calculateTool = {
   }
 };
 
+export const addInventoryItemTool = {
+  name: 'add_inventory_item',
+  description: 'Adds a new item to the store stationery/book inventory.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      retailer_id: {
+        type: Type.STRING,
+        description: 'The UUID of the retailer.'
+      },
+      item_name: {
+        type: Type.STRING,
+        description: 'The name of the stationery item or book (e.g. "Class 10 Math book", "Pen").'
+      },
+      category: {
+        type: Type.STRING,
+        enum: ['books', 'pens', 'notebooks', 'art_supplies', 'other'],
+        description: 'The category of the item.'
+      },
+      quantity: {
+        type: Type.INTEGER,
+        description: 'The number of copies/items to add to stock.'
+      },
+      cost_price: {
+        type: Type.NUMBER,
+        description: 'Optional cost price of the item.'
+      },
+      selling_price: {
+        type: Type.NUMBER,
+        description: 'Optional selling price of the item.'
+      }
+    },
+    required: ['retailer_id', 'item_name', 'category', 'quantity']
+  }
+};
+
 // All available tools grouped
 export const khataMitraTools = [
   addTransactionTool,
   getBalanceTool,
   getLedgerHistoryTool,
   weatherTool,
-  calculateTool
+  calculateTool,
+  addInventoryItemTool
 ];
