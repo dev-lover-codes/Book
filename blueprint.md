@@ -70,3 +70,6 @@
 - [x] **Step 27**: Verify compilation and run lint checks.
 - [x] **Step 28**: Create a GitHub Actions workflow file `.github/workflows/ci.yml` to run lint and build verification on push/pull request.
 - [x] **Step 29**: Generate a professional, modern crimson red and gold App Icon / Favicon (featuring traditional Indian ledger book motif and AI sparkles). Process and place files (`icon.png`, `favicon.ico`) in `/src/app` and `/public` directories for Next.js asset optimization.
+- [x] **Step 30**: Create Next.js proxy file at `src/proxy.ts` to ensure session persistence and token refresh are properly executed on every route request.
+- [x] **Step 31**: Update the `signUpWithEmail` server action in `src/app/actions/auth.ts` to use `createAdminClient` to register new users with `email_confirm: true` by default, bypassing email verification loops in the test/development environment.
+- [x] **Step 32**: Update the login handler in `src/app/page.tsx` to sign in on the client side using the browser Supabase client (or call `supabase.auth.setSession`), ensuring immediate auth listener execution and dashboard redirects.

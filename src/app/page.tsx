@@ -7,7 +7,7 @@ import { translations } from '@/lib/translations';
 import { Language } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import LanguageToggle from '@/components/LanguageToggle';
-import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '@/app/actions/auth';
+import { signUpWithEmail, signInWithGoogle } from '@/app/actions/auth';
 import { BookOpen, ArrowRight, Sparkles, Shield, AlertCircle, Lock, Mail, Loader2 } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 
@@ -130,11 +130,14 @@ export default function Home() {
           setAuthError(res.error || 'Signup failed.');
         }
       } else {
-        const res = await signInWithEmail(email, password);
-        if (res.success) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) {
+          setAuthError(error.message || 'Login failed.');
+        } else if (data.session) {
           router.refresh();
-        } else {
-          setAuthError(res.error || 'Login failed.');
         }
       }
     } catch (err) {

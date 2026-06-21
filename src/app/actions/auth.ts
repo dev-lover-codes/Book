@@ -62,10 +62,28 @@ export async function signInWithEmail(email: string, password: string) {
 // Fallback signup for local testing
 export async function signUpWithEmail(email: string, password: string) {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.signUp({
+    let adminClient;
+    try {
+      adminClient = createAdminClient();
+    } catch {
+      // Fallback if service role key is not configured
+      const supabase = await createClient();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, user: data.user };
+    }
+
+    const { data, error } = await adminClient.auth.admin.createUser({
       email,
       password,
+      email_confirm: true
     });
 
     if (error) {
