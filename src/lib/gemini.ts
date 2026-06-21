@@ -151,3 +151,57 @@ export const khataMitraTools = [
   calculateTool,
   addInventoryItemTool
 ];
+
+/**
+ * Executes a Gemini model query with automatic retry backoff on 429 Rate Limits / Resource Exhausted errors
+ */
+interface GeminiApiError {
+  message?: string;
+  status?: number;
+  details?: {
+    retryDelay?: string;
+  };
+  errorDetails?: {
+    retryDelay?: string;
+  };
+}
+
+export async function generateContentWithRetry(params: Parameters<typeof ai.models.generateContent>[0]) {
+  try {
+    return await ai.models.generateContent(params);
+  } catch (rawError) {
+    const error = rawError as GeminiApiError;
+    const errorStr = String(error?.message || '');
+    const errorStringified = JSON.stringify(error);
+    const isRateLimit = 
+      errorStr.includes('429') || 
+      errorStr.includes('RESOURCE_EXHAUSTED') || 
+      errorStringified.includes('429') ||
+      errorStringified.includes('RESOURCE_EXHAUSTED') ||
+      error?.status === 429;
+
+    if (isRateLimit) {
+      let delayMs = 4500;
+      // Inspect structured retry delay or regex parse "retryDelay" pattern
+      const delayStr = error?.details?.retryDelay || error?.errorDetails?.retryDelay || '';
+      if (delayStr && typeof delayStr === 'string') {
+        const matches = delayStr.match(/(\d+)s/);
+        if (matches) {
+          delayMs = parseInt(matches[1]) * 1000;
+        }
+      } else {
+        const match = errorStringified.match(/"retryDelay"\s*:\s*"(\d+)s"/i) || errorStr.match(/retryDelay.*?(\d+)s/i);
+        if (match) {
+          delayMs = parseInt(match[1]) * 1000;
+        }
+      }
+
+      console.warn(`[Gemini Rate Limit Triggered] 429 Resource Exhausted. Retrying call in ${delayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return await ai.models.generateContent(params);
+    }
+
+    throw error;
+  }
+}
+

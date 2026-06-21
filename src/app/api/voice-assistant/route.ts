@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ai, khataMitraTools } from '@/lib/gemini';
+import { khataMitraTools, generateContentWithRetry } from '@/lib/gemini';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 const voiceRequestSchema = z.object({
   audio: z.string().min(1, 'Audio data is required'),
   mimeType: z.string().optional(),
-  userId: z.string().uuid('Invalid user ID')
+  userId: z.string().uuid('Invalid user ID'),
+  history: z.array(
+    z.object({
+      role: z.enum(['user', 'assistant']),
+      content: z.string()
+    })
+  ).optional()
 });
+
+function pruneHistory(history: { role: 'user' | 'assistant'; content: string }[]) {
+  // Keep only the last 4 messages (2 user queries and 2 assistant replies)
+  const sliced = history.slice(-4);
+  return sliced.map((msg) => ({
+    role: msg.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: msg.content }]
+  }));
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
     }
 
-    const { audio, mimeType, userId } = parseResult.data;
+    const { audio, mimeType, userId, history = [] } = parseResult.data;
 
     const supabase = await createClient();
 
@@ -104,9 +119,10 @@ Operational Guidelines:
       ]
     };
 
-    const response = await ai.models.generateContent({
+    const prunedHistory = pruneHistory(history);
+    const response = await generateContentWithRetry({
       model,
-      contents: [audioContent],
+      contents: [...prunedHistory, audioContent],
       config: {
         systemInstruction,
         tools: [{ functionDeclarations: khataMitraTools }]
@@ -238,9 +254,10 @@ Operational Guidelines:
       }
 
       // Send execution response back to Gemini to compile final conversational response
-      const finalResult = await ai.models.generateContent({
+      const finalResult = await generateContentWithRetry({
         model,
         contents: [
+          ...prunedHistory,
           audioContent,
           { role: 'model', parts: [{ functionCall: call }] },
           { role: 'user', parts: [{ functionResponse: { name, response: toolResponse } }] }

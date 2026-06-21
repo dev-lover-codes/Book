@@ -121,6 +121,7 @@ export default function ChatAssistant({ profile }: ChatAssistantProps) {
 
   // Start voice input capture
   const startRecording = async () => {
+    if (isLoading) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -172,11 +173,13 @@ export default function ChatAssistant({ profile }: ChatAssistantProps) {
 
   // POST captured base64 audio data
   const sendVoiceMessage = async (base64Audio: string) => {
+    if (isLoading) return;
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content: lang === 'hi' ? '[आवाज संदेश भेजा गया]' : '[Voice Message Sent]',
     };
+    const historyPayload = messages.map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
@@ -190,6 +193,7 @@ export default function ChatAssistant({ profile }: ChatAssistantProps) {
           audio: base64Audio,
           mimeType: 'audio/wav',
           userId: profile.id,
+          history: historyPayload,
         }),
       });
 
@@ -219,6 +223,7 @@ export default function ChatAssistant({ profile }: ChatAssistantProps) {
     if (!input.trim() || isLoading) return;
 
     const userMessageText = input.trim();
+    const historyPayload = messages.map(m => ({ role: m.role, content: m.content }));
     setInput('');
     setErrorMsg(null);
 
@@ -240,6 +245,7 @@ export default function ChatAssistant({ profile }: ChatAssistantProps) {
         body: JSON.stringify({
           message: userMessageText,
           userId: profile.id,
+          history: historyPayload,
         }),
       });
 
