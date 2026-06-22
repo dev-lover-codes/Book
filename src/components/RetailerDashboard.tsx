@@ -6,7 +6,8 @@ import { formatIndianCurrency } from '@/lib/format';
 import { adminCreateCustomer, findProfileByPhone, fetchRetailerRelationships, updateProfile, updateCustomerDetails } from '@/app/actions/auth';
 import LedgerHistory from './LedgerHistory';
 import StationeryManager from './StationeryManager';
-import { Search, UserPlus, PlusCircle, ArrowUpRight, ArrowDownLeft, X, ArrowLeft, Phone, User, Store, Settings, Mail, MapPin, ClipboardList } from 'lucide-react';
+import DeleteAccountModal from './DeleteAccountModal';
+import { Search, UserPlus, PlusCircle, ArrowUpRight, ArrowDownLeft, X, ArrowLeft, Phone, User, Store, Settings, Mail, MapPin, ClipboardList, Trash2 } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -75,6 +76,9 @@ export default function RetailerDashboard({ profile, language }: RetailerDashboa
   const [shopGstin, setShopGstin] = useState(profile.business_gstin || '');
   const [shopSettingsError, setShopSettingsError] = useState<string | null>(null);
   const [shopSettingsSuccess, setShopSettingsSuccess] = useState(false);
+
+  // Delete Account Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Editing Customer details State
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -941,8 +945,38 @@ export default function RetailerDashboard({ profile, language }: RetailerDashboa
                 )}
               </button>
             </form>
+
+            {/* Danger Zone — Delete Account */}
+            <div className="mt-6 pt-5 border-t border-red-900/30">
+              <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2">
+                {lang === 'hi' ? 'खतरनाक क्षेत्र' : 'Danger Zone'}
+              </p>
+              <p className="text-xs text-zinc-500 mb-3">
+                {lang === 'hi'
+                  ? 'खाता हटाने से आपका सारा डेटा, ग्राहक, और लेन-देन स्थायी रूप से मिट जाएगा।'
+                  : 'Deleting your account permanently removes all data, customers, and transactions.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => { setIsShopSettingsOpen(false); setIsDeleteModalOpen(true); }}
+                className="w-full py-2.5 rounded-xl border border-red-800/60 bg-red-950/20 text-red-400 hover:bg-red-950/40 hover:text-red-300 text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+              >
+                <Trash2 className="h-4 w-4" />
+                {lang === 'hi' ? 'खाता हटाएं' : 'Delete My Account'}
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* ================= MODAL: DELETE ACCOUNT ================= */}
+      {isDeleteModalOpen && (
+        <DeleteAccountModal
+          userId={profile.id}
+          userName={profile.full_name}
+          language={lang as 'hi' | 'en'}
+          onClose={() => setIsDeleteModalOpen(false)}
+        />
       )}
 
     </div>

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { formatIndianCurrency } from '@/lib/format';
 import { fetchCustomerRelationships } from '@/app/actions/auth';
 import LedgerHistory from './LedgerHistory';
-import { Store, ArrowLeft, Phone, User, MapPin, CreditCard, Copy, Check } from 'lucide-react';
+import DeleteAccountModal from './DeleteAccountModal';
+import { Store, ArrowLeft, Phone, User, MapPin, CreditCard, Copy, Check, Trash2 } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -41,6 +42,7 @@ export default function CustomerDashboard({ profile, language }: CustomerDashboa
   const [selectedRel, setSelectedRel] = useState<RetailerRelationship | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleCopyUpi = (upi: string) => {
     navigator.clipboard.writeText(upi);
@@ -104,6 +106,15 @@ export default function CustomerDashboard({ profile, language }: CustomerDashboa
           </span>
           <span className="text-2xl font-black">{formatIndianCurrency(totalOwed)}</span>
         </div>
+
+        {/* Delete Account trigger */}
+        <button
+          onClick={() => setIsDeleteModalOpen(true)}
+          className="mt-2 md:mt-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/20 bg-white/10 hover:bg-red-500/30 hover:border-red-400/40 text-white/70 hover:text-red-200 transition-all self-start md:self-center"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          {lang === 'hi' ? 'खाता हटाएं' : 'Delete Account'}
+        </button>
       </div>
 
       {!selectedRel ? (
@@ -273,6 +284,16 @@ export default function CustomerDashboard({ profile, language }: CustomerDashboa
           </div>
 
         </div>
+      )}
+
+      {/* ================= MODAL: DELETE ACCOUNT ================= */}
+      {isDeleteModalOpen && (
+        <DeleteAccountModal
+          userId={profile.id}
+          userName={profile.full_name}
+          language={lang as 'hi' | 'en'}
+          onClose={() => setIsDeleteModalOpen(false)}
+        />
       )}
 
     </div>
