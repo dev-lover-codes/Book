@@ -106,7 +106,7 @@ Operational Guidelines:
 5. If the user asks about a customer or retailer not in their list, inform them politely that the connection or customer does not exist in their active database yet.
 6. When recording or querying ledger items, invoke the matching function declaration.`;
 
-    const model = 'gemini-2.0-flash';
+    const model = 'gemini-2.5-flash';
     const audioContent = {
       role: 'user',
       parts: [

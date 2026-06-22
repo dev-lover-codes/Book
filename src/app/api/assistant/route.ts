@@ -140,7 +140,7 @@ Current Time: ${new Date().toISOString()}`;
       parts: [userPart]
     };
 
-    const model = 'gemini-2.0-flash';
+    const model = 'gemini-2.5-flash';
     const prunedHistory = pruneHistory(history);
     const response = await generateContentWithRetry({
       model,
