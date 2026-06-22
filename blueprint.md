@@ -103,8 +103,4 @@
 - [x] **Step 60**: Solve language toggle bug on Customer and Retailer dashboard pages where selecting English did not translate dashboard elements. Pass active `language` state from parent page to CustomerDashboard, RetailerDashboard, and ChatAssistant.
 - [x] **Step 61**: Run ESLint validation checks and verify error-free compilation of the codebase.
 - [x] **Step 62**: Commit and push the changes to Git.
-
-
-
-
-
+- [ ] **Step 63**: Remediate the invalid/expired Gemini API Key error by guiding the user to provide a valid key, updating it in the local `.env.local` file and verifying its status.
