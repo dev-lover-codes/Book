@@ -30,6 +30,13 @@ function pruneHistory(history: { role: 'user' | 'assistant'; content: string }[]
 }
 
 export async function POST(req: NextRequest) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is not configured on the server. Customer creation will not work.' }, { status: 500 });
+  }
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ error: 'GEMINI_API_KEY is not configured.' }, { status: 500 });
+  }
+
   try {
     const body = await req.json();
 
@@ -152,6 +159,7 @@ Current Time: ${new Date().toISOString()}`;
     const prunedHistory = pruneHistory(history);
 
     // 4. Multi-turn agentic tool execution loop (max 5 iterations)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let currentContents: any[] = [...prunedHistory, userContentPart];
     let finalAnswer = '';
     let iterations = 0;

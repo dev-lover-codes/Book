@@ -272,6 +272,8 @@ export default function ChatAssistant({ profile, language }: ChatAssistantProps)
                 setMessages((prev) => [...prev, userMessage, assistantMessage]);
                 setIsLoading(false);
                 speakText(assistantResponse);
+                // Notify dashboard to refresh customer list
+                window.dispatchEvent(new CustomEvent('khata-agent-action', { detail: assistantResponse }));
               }}
               onError={(error) => {
                 setErrorMsg(error);

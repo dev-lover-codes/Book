@@ -86,6 +86,7 @@ export default function RetailerDashboard({ profile, language }: RetailerDashboa
   const [custAddressText, setCustAddressText] = useState('');
   const [custEmailText, setCustEmailText] = useState('');
   const [isSavingCustDetails, setIsSavingCustDetails] = useState(false);
+  const [agentFeed, setAgentFeed] = useState<string[]>([]);
 
   // Fetch all retailer-customer relationships
   async function fetchRelationships() {
@@ -122,10 +123,22 @@ export default function RetailerDashboard({ profile, language }: RetailerDashboa
     const handleDataChanged = () => {
       fetchRelationships();
     };
+    const handleAgentAction = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (customEvent.detail) {
+        setAgentFeed((prev) => [customEvent.detail, ...prev].slice(0, 5));
+      }
+      fetchRelationships();
+    };
+
     window.addEventListener('khata-data-changed', handleDataChanged);
-    return () => window.removeEventListener('khata-data-changed', handleDataChanged);
+    window.addEventListener('khata-agent-action', handleAgentAction);
+    return () => {
+      window.removeEventListener('khata-data-changed', handleDataChanged);
+      window.removeEventListener('khata-agent-action', handleAgentAction);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedCust]);
 
 
   // Handle adding customer (Lookup by phone, otherwise insert profile + relationship)
@@ -357,6 +370,15 @@ export default function RetailerDashboard({ profile, language }: RetailerDashboa
           <span className="text-2xl font-black">{formatIndianCurrency(totalUdhaar)}</span>
         </div>
       </div>
+
+      {agentFeed.length > 0 && (
+        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-medium space-y-1">
+          <p className="font-bold text-emerald-300 uppercase text-[10px] tracking-wider">⚡ Agent Actions</p>
+          {agentFeed.map((msg, i) => (
+            <p key={i}>{msg}</p>
+          ))}
+        </div>
+      )}
 
       {!selectedCust ? (
         <div className="space-y-4">
