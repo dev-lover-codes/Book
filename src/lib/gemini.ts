@@ -1,9 +1,19 @@
 import { GoogleGenAI, Type } from '@google/genai';
 
-// Initialize the Google Gen AI client using GEMINI_API_KEY
-export const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || '',
-});
+// Lazy factory: creates a fresh GoogleGenAI client per call so that
+// the latest GEMINI_API_KEY value from process.env is always used.
+export function getAI(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY || '';
+  if (!apiKey) {
+    console.error('[Gemini] GEMINI_API_KEY is not set in environment variables!');
+  } else {
+    console.log(`[Gemini] Using API key prefix: ${apiKey.substring(0, 10)}...`);
+  }
+  return new GoogleGenAI({ apiKey });
+}
+
+// Keep a named export for backward compat — lazily resolved on first use
+export const ai = getAI();
 
 // Tool Definitions
 export const addTransactionTool = {
@@ -167,8 +177,9 @@ interface GeminiApiError {
 }
 
 export async function generateContentWithRetry(params: Parameters<typeof ai.models.generateContent>[0]) {
+  const client = getAI();
   try {
-    return await ai.models.generateContent(params);
+    return await client.models.generateContent(params);
   } catch (rawError) {
     const error = rawError as GeminiApiError;
     const errorStr = String(error?.message || '');
@@ -198,7 +209,7 @@ export async function generateContentWithRetry(params: Parameters<typeof ai.mode
 
       console.warn(`[Gemini Rate Limit Triggered] 429 Resource Exhausted. Retrying call in ${delayMs}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
-      return await ai.models.generateContent(params);
+      return await getAI().models.generateContent(params);
     }
 
     throw error;
