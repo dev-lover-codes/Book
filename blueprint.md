@@ -100,6 +100,10 @@
 - [x] **Step 57**: Update the embedded signup panel on the main landing page `src/app/page.tsx` (when `isSignUp` is true) to include the redesigned registration layout: Full Name, Email, Password, Confirm Password, and Terms & Conditions.
 - [x] **Step 58**: Run lint checks and build verification to ensure no errors.
 - [x] **Step 59**: Execute Git commit and push command.
+- [x] **Step 60**: Solve language toggle bug on Customer and Retailer dashboard pages where selecting English did not translate dashboard elements. Pass active `language` state from parent page to CustomerDashboard, RetailerDashboard, and ChatAssistant.
+- [x] **Step 61**: Run ESLint validation checks and verify error-free compilation of the codebase.
+- [x] **Step 62**: Commit and push the changes to Git.
+
 
 
 

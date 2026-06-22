@@ -101,11 +101,11 @@ export default function CustomerPage() {
 
       {/* Dashboard Body */}
       <main className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8">
-        <CustomerDashboard profile={profile} />
+        <CustomerDashboard profile={profile} language={language} />
       </main>
 
       {/* Floating Chat Assistant Widget */}
-      <ChatAssistant profile={profile} />
+      <ChatAssistant profile={profile} language={language} />
     </div>
   );
 }

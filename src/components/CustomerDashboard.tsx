@@ -31,10 +31,11 @@ interface RetailerRelationship {
 
 interface CustomerDashboardProps {
   profile: Profile;
+  language: 'hi' | 'en';
 }
 
-export default function CustomerDashboard({ profile }: CustomerDashboardProps) {
-  const lang = profile.preferred_language || 'hi';
+export default function CustomerDashboard({ profile, language }: CustomerDashboardProps) {
+  const lang = language || profile.preferred_language || 'hi';
 
   const [relationships, setRelationships] = useState<RetailerRelationship[]>([]);
   const [selectedRel, setSelectedRel] = useState<RetailerRelationship | null>(null);

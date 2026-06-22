@@ -12,6 +12,7 @@ interface ChatAssistantProps {
     role: 'retailer' | 'customer';
     preferred_language: 'hi' | 'en';
   };
+  language: 'hi' | 'en';
 }
 
 interface Message {
@@ -21,7 +22,7 @@ interface Message {
   created_at?: string;
 }
 
-export default function ChatAssistant({ profile }: ChatAssistantProps) {
+export default function ChatAssistant({ profile, language }: ChatAssistantProps) {
   const supabase = createClient();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -32,7 +33,7 @@ export default function ChatAssistant({ profile }: ChatAssistantProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
 
-  const lang = profile.preferred_language;
+  const lang = language || profile.preferred_language || 'hi';
 
   // Language definitions
   const text = {

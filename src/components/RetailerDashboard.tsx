@@ -36,11 +36,12 @@ interface CustomerRelationship {
 
 interface RetailerDashboardProps {
   profile: Profile;
+  language: 'hi' | 'en';
 }
 
-export default function RetailerDashboard({ profile }: RetailerDashboardProps) {
+export default function RetailerDashboard({ profile, language }: RetailerDashboardProps) {
   const supabase = createClient();
-  const lang = profile.preferred_language || 'hi';
+  const lang = language || profile.preferred_language || 'hi';
 
   const [relationships, setRelationships] = useState<CustomerRelationship[]>([]);
   const [selectedCust, setSelectedCust] = useState<CustomerRelationship | null>(null);
