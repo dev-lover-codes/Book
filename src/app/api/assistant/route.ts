@@ -31,6 +31,13 @@ function pruneHistory(history: { role: 'user' | 'assistant'; content: string }[]
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // Backward compatibility check for older client layouts
+    if (body && !body.inputType && body.message) {
+      body.inputType = 'text';
+      body.textPayload = body.message;
+    }
+
     const parseResult = requestSchema.safeParse(body);
 
     if (!parseResult.success) {

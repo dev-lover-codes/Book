@@ -94,5 +94,9 @@
 - [x] **Step 51**: Integrate `ChatInput.tsx` into `src/components/ChatAssistant.tsx` to replace the old footer input and verify bilinguality / speech synthesis options.
 - [x] **Step 52**: Verify build compilation and run linting checks.
 - [x] **Step 53**: Commit and push the changes to Git.
+- [x] **Step 54**: Fix backward compatibility issue in `/api/assistant/route.ts` where older cached clients might send `message` payload directly instead of `inputType`, preventing `"Invalid option: expected one of 'text'|'audio'"` error.
+- [x] **Step 55**: Add "Confirm Password" input field to registration page `/src/app/signup/page.tsx` with proper layout order and validation check.
+- [x] **Step 56**: Execute linting, compilation test, stage, commit and push changes.
+
 
 

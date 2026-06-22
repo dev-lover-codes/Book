@@ -13,6 +13,7 @@ export default function SignUpPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +21,12 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !confirmPassword) {
       setError('All fields are required.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
     if (!agreeTerms) {
@@ -175,6 +180,28 @@ export default function SignUpPage() {
                   name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                  className="pl-11 block w-full rounded-xl border border-zinc-800 bg-[#070A0F] py-3 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-zinc-300">
+                Confirm Password
+              </label>
+              <div className="relative mt-1.5">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <input
+                  type="password"
+                  id="confirm-password"
+                  name="confirm-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                   disabled={isLoading}
