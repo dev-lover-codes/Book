@@ -139,6 +139,29 @@ export const createCustomerTool = {
   }
 };
 
+export const createCustomerAndLinkTool = {
+  name: 'create_customer_and_link',
+  description: 'Creates a new customer profile and links them to the retailer in the relationships table. Use this whenever the retailer asks to create, add, or register a new customer by name (and optionally phone). After creation, you can immediately call add_transaction on the new customer.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      retailer_id: {
+        type: Type.STRING,
+        description: 'UUID of the retailer creating this customer.'
+      },
+      customer_name: {
+        type: Type.STRING,
+        description: 'Full name of the new customer (e.g. "Ramu", "Ramesh Kumar").'
+      },
+      phone: {
+        type: Type.STRING,
+        description: 'Optional 10-digit Indian mobile number without +91 prefix. If not provided, generate a placeholder.'
+      }
+    },
+    required: ['retailer_id', 'customer_name']
+  }
+};
+
 export const addInventoryItemTool = {
   name: 'add_inventory_item',
   description: 'Adds a new item to the store stationery/book inventory.',
@@ -183,6 +206,7 @@ export const khataMitraTools = [
   weatherTool,
   calculateTool,
   createCustomerTool,
+  createCustomerAndLinkTool,
   addInventoryItemTool
 ];
 

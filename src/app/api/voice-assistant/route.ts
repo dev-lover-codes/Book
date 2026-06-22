@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { khataMitraTools, generateContentWithRetry } from '@/lib/gemini';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 
 const voiceRequestSchema = z.object({
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
     if (profile.role === 'retailer') {
       contextInfo += `Shop/Business Name: ${profile.business_name || 'General Store'}\n`;
       contextInfo += `Associated Customers (Retailer Ledger Relationships):\n`;
-      
+
       const { data: relationships } = await supabase
         .from('relationships')
         .select('customer_id, balance, profiles!customer_id(full_name, phone)')
@@ -72,12 +73,12 @@ export async function POST(req: NextRequest) {
       }
     } else {
       contextInfo += `Associated Retailers (Customer Ledger Relationships):\n`;
-      
+
       const { data: retailerRels } = await supabase
         .from('relationships')
         .select('retailer_id, balance, profiles!retailer_id(full_name, business_name)')
         .eq('customer_id', userId);
-      
+
       if (retailerRels && retailerRels.length > 0) {
         retailerRels.forEach((r) => {
           const retailer = r.profiles as unknown as { full_name: string; business_name: string | null } | null;
@@ -88,23 +89,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. System Prompt and Instructions
-    const systemInstruction = `You are KhataMitra, a friendly, concise, and helpful financial assistant for Indian shopkeepers (retailers) and customers.
-You support interactions in Hindi (हिंदी), English, and Hinglish (Hindi written in Latin script, e.g., "Ramu ko 200 rupaye udhaar").
-Your current user profile context is:
+    // 3. Master Bilingual System Instruction — AGENT MODE
+    const systemInstruction = `You are KhataMitra — a fully autonomous, action-first, end-to-end AI Agent for Indian shopkeepers. The user is communicating via voice. You must execute tasks completely on behalf of the retailer without asking for confirmation, clarification, or permission, and without saying you cannot perform an action.
+ 
+CRITICAL OPERATIONAL RULES — STRICTLY ENFORCED:
+1. BE AN AGENT, NOT A CHATBOT: Never reply with "I cannot do that", "Failed", "Please confirm", or "I need more details". You are equipped with all required tools. You MUST execute tool calls immediately.
+2. AUTOMATIC CHAINING (CREATE THEN TRANSACT): If a shopkeeper asks to register, add, or create a customer AND log a transaction (e.g. "create Ramu account and add 500 credit"), you MUST chain the calls:
+   - Turn 1: Call create_customer_and_link tool first.
+   - Turn 2 (when create_customer_and_link returns success): Call add_transaction tool immediately with the returned customer_id.
+   Never ask the shopkeeper for permission between these steps.
+3. CUSTOMER RESOLUTION & CREATION: Match any customer name in the retailer's query against the context list below (case-insensitive). If the customer does not exist, or if all customer names in the list are "Unknown", you MUST call create_customer_and_link to create and register them first. Never refuse due to missing customer.
+4. HINDI / ENGLISH / HINGLISH COMPLIANCE: Respond in the exact same language, script, and style used by the shopkeeper. E.g., Hinglish -> Hinglish, Devanagari Hindi -> Devanagari Hindi.
+5. TRANSCRIBE AND CONFIRM: Start your final reply by transcribing what you heard (e.g. "Maine suna: 'create Ramu account...'"), followed by a clear confirmation of the actions taken. E.g., "Ramu ka account ban gaya aur ₹500 credit/udhaar jod diya gaya hai! ✅"
+6. ERROR RESILIENCE: If any tool fails, explain the exact technical reason to the user with a solution. Never give up.
+ 
+CURRENT USER CONTEXT (use these IDs for tool calls):
 ${contextInfo}
-Current Time: ${new Date().toISOString()}
-
-The user is sending a voice message. Listen to the audio, determine the command (e.g. logging Udhaar/Jama, checking balances, weather, math), and execute the appropriate tool call.
-Always answer in a conversational bilingual format (Hindi + English). First transcribe what you heard from the user, and then provide the assistant response.
-
-Operational Guidelines:
-1. NEVER invent or hallucinate balances, customer names, or transaction histories. Always call the relevant database tools first to query or record data.
-2. Trust tool results completely. If a tool reports a balance of ₹500, state it exactly. If a transaction succeeds, confirm it.
-3. Be polite and concise. Indian shopkeepers value quick, clear answers without excessive fluff.
-4. Answer in the language preferred by the user, or use Hinglish if they talk in Hinglish.
-5. If the user asks about a customer or retailer not in their list, inform them politely that the connection or customer does not exist in their active database yet.
-6. When recording or querying ledger items, invoke the matching function declaration.`;
+Current Time: ${new Date().toISOString()}`;
 
     const model = 'gemini-2.5-flash';
     const audioContent = {
@@ -120,24 +121,38 @@ Operational Guidelines:
     };
 
     const prunedHistory = pruneHistory(history);
-    const response = await generateContentWithRetry({
-      model,
-      contents: [...prunedHistory, audioContent],
-      config: {
-        systemInstruction,
-        tools: [{ functionDeclarations: khataMitraTools }]
+
+    // 4. Multi-turn agentic tool execution loop (max 5 iterations)
+    let currentContents: any[] = [...prunedHistory, audioContent];
+    let finalAnswer = '';
+    let iterations = 0;
+    const MAX_ITERATIONS = 5;
+
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+
+      const response = await generateContentWithRetry({
+        model,
+        contents: currentContents,
+        config: {
+          systemInstruction,
+          tools: [{ functionDeclarations: khataMitraTools }]
+        }
+      });
+
+      const functionCalls = response.functionCalls;
+
+      // No more tool calls — we have the final text answer
+      if (!functionCalls || functionCalls.length === 0) {
+        finalAnswer = response.text || '';
+        break;
       }
-    });
 
-    const functionCalls = response.functionCalls;
-    let finalAnswer = response.text || '';
-
-    // 4. Handle Tool Calls
-    if (functionCalls && functionCalls.length > 0) {
+      // Execute the first tool call returned
       const call = functionCalls[0];
-      const name = call.name;
+      const name = call.name ?? '';
       const args = call.args as Record<string, unknown>;
-      let toolResponse: Record<string, unknown> = { success: false, message: 'Tool execution failed' };
+      let toolResponse: Record<string, unknown> = { success: false, message: 'Tool not recognised' };
 
       try {
         if (name === 'add_transaction') {
@@ -148,15 +163,14 @@ Operational Guidelines:
             amount: number;
             note?: string;
           };
-          
-          // Get or create relationship record
+
           let { data: rel } = await supabase
             .from('relationships')
             .select('id')
             .eq('retailer_id', retailer_id)
             .eq('customer_id', customer_id)
             .single();
-            
+
           if (!rel) {
             const { data: newRel, error: relError } = await supabase
               .from('relationships')
@@ -186,8 +200,8 @@ Operational Guidelines:
             if (txError) throw txError;
             toolResponse = { success: true, message: `Successfully logged ${type} transaction of ₹${amount}.` };
           }
-        } 
-        
+        }
+
         else if (name === 'get_balance') {
           const { retailer_id, customer_id } = args as { retailer_id: string; customer_id: string };
           const { data: rel, error } = await supabase
@@ -202,11 +216,11 @@ Operational Guidelines:
           } else {
             toolResponse = { success: true, balance: rel.balance, message: `Current balance is ₹${rel.balance}.` };
           }
-        } 
-        
+        }
+
         else if (name === 'get_ledger_history') {
           const { retailer_id, customer_id } = args as { retailer_id: string; customer_id: string };
-          
+
           const { data: rel } = await supabase
             .from('relationships')
             .select('id')
@@ -226,8 +240,8 @@ Operational Guidelines:
             if (error) throw error;
             toolResponse = { success: true, history: txs || [] };
           }
-        } 
-        
+        }
+
         else if (name === 'get_weather') {
           const { city } = args as { city?: string };
           toolResponse = {
@@ -237,8 +251,8 @@ Operational Guidelines:
             condition: 'Partly Cloudy / आंशिक रूप से बादल छाए हैं',
             humidity: '60%'
           };
-        } 
-        
+        }
+
         else if (name === 'calculate') {
           const { expression } = args as { expression: string };
           try {
@@ -249,25 +263,217 @@ Operational Guidelines:
             toolResponse = { success: false, error: 'Invalid mathematical expression' };
           }
         }
+
+        else if (name === 'create_customer') {
+          const { retailer_id, customer_name, phone } = args as {
+            retailer_id: string;
+            customer_name: string;
+            phone?: string;
+          };
+
+          const adminClient = createAdminClient();
+          const cleanName = customer_name.trim();
+          const cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+          const timestamp = Date.now();
+          const slugName = cleanName.toLowerCase().replace(/\s+/g, '_');
+          const dummyEmail = cleanPhone
+            ? `customer_${cleanPhone}@khata-mitr.app`
+            : `customer_${slugName}_${timestamp}@khata-mitr.app`;
+          const dummyPassword = `KM_${timestamp}_${Math.random().toString(36).slice(2, 8)}`;
+
+          const { data: existingRel } = await supabase
+            .from('relationships')
+            .select('customer_id, profiles!customer_id(full_name)')
+            .eq('retailer_id', retailer_id);
+
+          const existing = (existingRel || []).find((r) => {
+            const p = r.profiles as unknown as { full_name: string } | null;
+            return p?.full_name?.toLowerCase() === cleanName.toLowerCase();
+          });
+
+          if (existing) {
+            toolResponse = {
+              success: true,
+              customer_id: existing.customer_id,
+              already_exists: true,
+              message: `Customer "${cleanName}" already exists with ID ${existing.customer_id}. Use this ID for transactions.`
+            };
+          } else {
+            const { data: userData, error: userError } = await adminClient.auth.admin.createUser({
+              email: dummyEmail,
+              password: dummyPassword,
+              email_confirm: true,
+              user_metadata: { full_name: cleanName, phone: cleanPhone || '' }
+            });
+
+            if (userError) throw new Error(`Failed to create auth user: ${userError.message}`);
+
+            const newCustomerId = userData.user.id;
+
+            const { error: profileError } = await adminClient.from('profiles').upsert({
+              id: newCustomerId,
+              full_name: cleanName,
+              phone: cleanPhone || null,
+              role: 'customer',
+              preferred_language: 'hi'
+            });
+            if (profileError) throw new Error(`Failed to create profile: ${profileError.message}`);
+
+            const { error: relError } = await adminClient.from('relationships').insert({
+              retailer_id,
+              customer_id: newCustomerId,
+              balance: 0
+            });
+            if (relError) throw new Error(`Failed to create relationship: ${relError.message}`);
+
+            toolResponse = {
+              success: true,
+              customer_id: newCustomerId,
+              already_exists: false,
+              message: `Customer "${cleanName}" successfully created with ID ${newCustomerId}. Now you can call add_transaction with this customer_id.`
+            };
+          }
+        }
+
+        else if (name === 'create_customer_and_link') {
+          const { retailer_id, customer_name, phone } = args as {
+            retailer_id: string;
+            customer_name: string;
+            phone?: string;
+          };
+
+          try {
+            // 1. Generate a unique placeholder email and password for the new customer
+            const timestamp = Date.now();
+            const cleanName = customer_name.toLowerCase().replace(/\s+/g, '_');
+            const dummyEmail = `customer_${cleanName}_${timestamp}@khatamitra.app`;
+            const dummyPassword = `KM_${timestamp}_secure`;
+            const phoneFormatted = phone ? `+91${phone.replace(/\D/g, '').slice(-10)}` : null;
+
+            // 2. Use Supabase Admin Client (service_role) to create auth user — bypass email verification
+            const { createClient: createAdminSupabase } = await import('@supabase/supabase-js');
+            const adminClient = createAdminSupabase(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.SUPABASE_SERVICE_ROLE_KEY!,
+              { auth: { autoRefreshToken: false, persistSession: false } }
+            );
+
+            const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+              email: dummyEmail,
+              password: dummyPassword,
+              email_confirm: true,
+              user_metadata: { full_name: customer_name }
+            });
+
+            if (authError) throw new Error(`Auth creation failed: ${authError.message}`);
+            const newCustomerId = authData.user?.id;
+            if (!newCustomerId) throw new Error('No user ID returned from auth creation');
+
+            // 3. Insert profile row
+            const { error: profileError } = await adminClient
+              .from('profiles')
+              .insert({
+                id: newCustomerId,
+                full_name: customer_name,
+                phone: phoneFormatted,
+                role: 'customer',
+                preferred_language: 'hi'
+              });
+
+            if (profileError) throw new Error(`Profile insert failed: ${profileError.message}`);
+
+            // 4. Create relationship between retailer and new customer
+            const { error: relError } = await adminClient
+              .from('relationships')
+              .insert({
+                retailer_id,
+                customer_id: newCustomerId,
+                balance: 0
+              });
+
+            if (relError) throw new Error(`Relationship creation failed: ${relError.message}`);
+
+            toolResponse = {
+              success: true,
+              customer_id: newCustomerId,
+              customer_name,
+              message: `Customer "${customer_name}" account created and linked to your shop. customer_id is ${newCustomerId}. You can now call add_transaction with this customer_id.`
+            };
+          } catch (err) {
+            toolResponse = {
+              success: false,
+              error: err instanceof Error ? err.message : 'Unknown error during customer creation'
+            };
+          }
+        }
+
+        else if (name === 'add_inventory_item') {
+          const { retailer_id, item_name, category, quantity, cost_price, selling_price } = args as {
+            retailer_id: string;
+            item_name: string;
+            category: 'books' | 'pens' | 'notebooks' | 'art_supplies' | 'other';
+            quantity: number;
+            cost_price?: number;
+            selling_price?: number;
+          };
+
+          const { data: existingItem } = await supabase
+            .from('inventory')
+            .select('*')
+            .eq('retailer_id', retailer_id)
+            .ilike('item_name', item_name)
+            .maybeSingle();
+
+          if (existingItem) {
+            const newStock = existingItem.stock_quantity + Number(quantity);
+            const { error: updateError } = await supabase
+              .from('inventory')
+              .update({
+                stock_quantity: newStock,
+                cost_price: cost_price !== undefined ? Number(cost_price) : existingItem.cost_price,
+                selling_price: selling_price !== undefined ? Number(selling_price) : existingItem.selling_price,
+              })
+              .eq('id', existingItem.id);
+
+            if (updateError) throw updateError;
+            toolResponse = {
+              success: true,
+              message: `Updated stock of existing item "${existingItem.item_name}". Added ${quantity} units. New stock level is ${newStock}.`
+            };
+          } else {
+            const { error: insertError } = await supabase
+              .from('inventory')
+              .insert({
+                retailer_id,
+                item_name,
+                category,
+                stock_quantity: Number(quantity),
+                cost_price: cost_price !== undefined ? Number(cost_price) : 0,
+                selling_price: selling_price !== undefined ? Number(selling_price) : 0,
+                low_stock_threshold: 5
+              });
+
+            if (insertError) throw insertError;
+            toolResponse = {
+              success: true,
+              message: `Successfully added new inventory item "${item_name}" under category "${category}" with ${quantity} units.`
+            };
+          }
+        }
       } catch (err) {
         toolResponse = { success: false, error: err instanceof Error ? err.message : 'Unknown tool error' };
       }
 
-      // Send execution response back to Gemini to compile final conversational response
-      const finalResult = await generateContentWithRetry({
-        model,
-        contents: [
-          ...prunedHistory,
-          audioContent,
-          { role: 'model', parts: [{ functionCall: call }] },
-          { role: 'user', parts: [{ functionResponse: { name, response: toolResponse } }] }
-        ],
-        config: {
-          systemInstruction
-        }
-      });
+      // Append the model's function call + our tool result, then loop
+      currentContents = [
+        ...currentContents,
+        { role: 'model', parts: [{ functionCall: call }] },
+        { role: 'user', parts: [{ functionResponse: { name, response: toolResponse } }] }
+      ];
+    }
 
-      finalAnswer = finalResult.text || '';
+    if (!finalAnswer) {
+      finalAnswer = 'Kaam ho gaya hai. (Task completed)';
     }
 
     // 5. Log chat interaction to database
