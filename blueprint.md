@@ -115,5 +115,6 @@
 - [x] **Step 72**: Implement the backend handler for `find_customer` inside both text (`/api/assistant`) and voice (`/api/voice-assistant`) endpoints.
 - [x] **Step 73**: Enforce rule in systemInstruction to ALWAYS search using `find_customer` first before calling `create_customer_and_link` or `add_transaction` when a customer name is mentioned.
 - [x] **Step 74**: Run compiler, linter, and build verification checks to guarantee error-free code execution.
+- [x] **Step 75**: Refactor text-to-speech engine (`speakText`) in `src/components/ChatAssistant.tsx` to clean markdown format elements, load/cache voices reliably, and chunk text sequentially to resolve character cutoff and clarity issues.
 
 

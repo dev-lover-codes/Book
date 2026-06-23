@@ -90,20 +90,112 @@ export default function ChatAssistant({ profile, language }: ChatAssistantProps)
   }, [isOpen, profile.id, supabase, messages.length]);
 
   // Text-To-Speech voice feedback
-  const speakText = (textToSpeak: string) => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
+  // Clean AI response text before speaking — remove markdown that sounds bad when read aloud
+  const cleanTextForSpeech = (text: string): string => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1')        // Remove bold **text**
+      .replace(/\*(.*?)\*/g, '$1')            // Remove italic *text*
+      .replace(/#{1,6}\s/g, '')               // Remove markdown headers
+      .replace(/`{1,3}[^`]*`{1,3}/g, '')      // Remove code blocks
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to just text
+      .replace(/₹/g, ' rupaye ')             // Read ₹ as "rupaye" naturally
+      .replace(/•\s/g, '')                    // Remove bullet points
+      .replace(/[-–—]\s/g, '')               // Remove dashes used as bullets
+      .replace(/\n{2,}/g, '. ')              // Multiple newlines become pause
+      .replace(/\n/g, ', ')                  // Single newlines become comma pause
+      .replace(/\s{2,}/g, ' ')               // Collapse extra spaces
+      .trim();
+  };
 
-      // Attempt to load Indian localized speech engine voices
+  // Load and cache voices properly — browsers need a moment to load voice list
+  const getVoices = (): Promise<SpeechSynthesisVoice[]> => {
+    return new Promise((resolve) => {
       const voices = window.speechSynthesis.getVoices();
-      const targetVoice = voices.find(v => v.lang.startsWith(lang === 'hi' ? 'hi' : 'en'));
-      if (targetVoice) {
-        utterance.voice = targetVoice;
+      if (voices.length > 0) {
+        resolve(voices);
+        return;
       }
-      window.speechSynthesis.speak(utterance);
+      // Voices not loaded yet — wait for the event
+      const handler = () => {
+        resolve(window.speechSynthesis.getVoices());
+        window.speechSynthesis.removeEventListener('voiceschanged', handler);
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', handler);
+      // Fallback timeout in case voiceschanged never fires
+      setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+    });
+  };
+
+  const speakText = async (textToSpeak: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    // Cancel any currently playing speech
+    window.speechSynthesis.cancel();
+
+    const cleaned = cleanTextForSpeech(textToSpeak);
+    if (!cleaned || cleaned.length < 2) return;
+
+    const voices = await getVoices();
+    const isHindi = lang === 'hi';
+
+    // Find best voice — priority order
+    let selectedVoice: SpeechSynthesisVoice | null = null;
+
+    if (isHindi) {
+      // Try to find a Hindi voice in order of preference
+      selectedVoice =
+        voices.find(v => v.lang === 'hi-IN' && v.localService) ||
+        voices.find(v => v.lang === 'hi-IN') ||
+        voices.find(v => v.lang.startsWith('hi')) ||
+        voices.find(v => v.lang === 'en-IN' && v.localService) ||
+        voices.find(v => v.lang === 'en-IN') ||
+        voices.find(v => v.lang.startsWith('en-IN')) ||
+        null;
+    } else {
+      // English — prefer Indian English, fall back to any English
+      selectedVoice =
+        voices.find(v => v.lang === 'en-IN' && v.localService) ||
+        voices.find(v => v.lang === 'en-IN') ||
+        voices.find(v => v.lang === 'en-US' && v.localService) ||
+        voices.find(v => v.lang.startsWith('en') && v.localService) ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        null;
     }
+
+    // Split long text into chunks to avoid browser TTS cutoff bug (many browsers stop after ~200 chars)
+    const MAX_CHUNK = 180;
+    const sentences = cleaned.match(/[^.!?,]{1,180}[.!?,]?/g) || [cleaned];
+    const chunks: string[] = [];
+    let current = '';
+    for (const sentence of sentences) {
+      if ((current + sentence).length > MAX_CHUNK) {
+        if (current.trim()) chunks.push(current.trim());
+        current = sentence;
+      } else {
+        current += sentence;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+
+    // Speak each chunk sequentially
+    const speakChunk = (index: number) => {
+      if (index >= chunks.length) return;
+      const utterance = new SpeechSynthesisUtterance(chunks[index]);
+      utterance.lang = isHindi ? 'hi-IN' : 'en-IN';
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.rate = 0.88;     // Slightly slower than default for clarity
+      utterance.pitch = 1.0;     // Natural pitch
+      utterance.volume = 1.0;    // Full volume
+      utterance.onend = () => speakChunk(index + 1);
+      utterance.onerror = (e) => {
+        // Silently ignore TTS errors — don't crash the UI
+        console.warn('TTS chunk error:', e.error, 'chunk:', chunks[index]);
+        speakChunk(index + 1); // Try next chunk anyway
+      };
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakChunk(0);
   };
 
 
@@ -271,7 +363,7 @@ export default function ChatAssistant({ profile, language }: ChatAssistantProps)
                 };
                 setMessages((prev) => [...prev, userMessage, assistantMessage]);
                 setIsLoading(false);
-                speakText(assistantResponse);
+                void speakText(assistantResponse);
                 // Notify dashboard to refresh customer list
                 window.dispatchEvent(new CustomEvent('khata-agent-action', { detail: assistantResponse }));
               }}
